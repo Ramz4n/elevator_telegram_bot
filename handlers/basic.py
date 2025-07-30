@@ -17,16 +17,16 @@ async def cmd_start(message: types.Message):
 
     # Формируем кнопки
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=city, callback_data=f"city:{city}")]
-            for city in cities])
+            [InlineKeyboardButton(text=city_name, callback_data=f"city:{city_id}")]
+            for city_id, city_name in cities])
 
     await message.answer( "Привет! Выбери город из списка:", reply_markup=keyboard )
 
 
 @router.callback_query(F.data.startswith("city:"))
 async def handle_city(callback: CallbackQuery):
-    city = callback.data.split(":", 1)[1]  # достаём название города
-    streets = await get_all_streets(city)
+    city_id = int(callback.data.split(":", 1)[1])  # достаём id города
+    streets = await get_all_streets(city_id)
 
     if not streets:
         await callback.message.answer("Улицы не найдены.")
@@ -35,9 +35,9 @@ async def handle_city(callback: CallbackQuery):
     # Кнопки с улицами
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=street, callback_data=f"street:{city}:{street}")]
-            for street in streets] )
-    await callback.message.answer(f"Выбран город: {city}\nТеперь выбери улицу:", reply_markup=keyboard)
+            [InlineKeyboardButton(text=street_name, callback_data=f"street:{city_id}:{street_id}")]
+            for street_id, street_name in streets] )
+    await callback.message.answer(f"Выбран город: {city_name}\nТеперь выбери улицу:", reply_markup=keyboard)
     await callback.answer()
 
 
@@ -62,4 +62,17 @@ async def handle_street(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("home:"))
 async def handler_home(callback: CallbackQuery):
     _, city, street, home = callback.data.split(":", 3)
-    entrance = get_all
+    sections = get_all_sections(city, street, home)
+
+    if not sections:
+        await callback.message.answer("Подъезды не найдены.")
+        return
+
+    # Кнопки с падиками
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=section, callback_data=f"section:{city}:{street}:{home}:{section}")]
+            for section in sections])
+    await callback.message.answer(f"Выбран город: {city}\nВыбрана улица: {street}\nВыбран дом: {home}\nТеперь выбери подъезд:",
+                                  reply_markup=keyboard)
+    await callback.answer()
