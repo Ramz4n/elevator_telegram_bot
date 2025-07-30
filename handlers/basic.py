@@ -62,7 +62,7 @@ async def handle_street(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("home:"))
 async def handler_home(callback: CallbackQuery):
     _, city, street, home = callback.data.split(":", 3)
-    sections = get_all_sections(city, street, home)
+    sections = await get_all_sections(home)
 
     if not sections:
         await callback.message.answer("Подъезды не найдены.")
