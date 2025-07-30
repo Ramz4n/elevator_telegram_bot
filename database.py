@@ -40,5 +40,8 @@ async def get_all_entrance(town : str, street : str, home : str) -> list[str]:
                         JOIN street s ON d.id_улица = s.id
                         JOIN goroda g ON s.id_город = g.id
                         WHERE g.Город = %s AND s.Улица = %s'''
+            await cursor.execute(query, (town, street, home,))
+            result = await cursor.fetchall()
+            return [row[0] for row in result]
 
 

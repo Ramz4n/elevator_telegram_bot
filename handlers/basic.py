@@ -62,3 +62,4 @@ async def handle_street(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("home:"))
 async def handler_home(callback: CallbackQuery):
     _, city, street, home = callback.data.split(":", 3)
+    entrance = get_all
