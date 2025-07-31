@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types import CallbackQuery
 from aiogram import F
-from database import get_all_cities, get_all_streets, get_all_homes
+from database import get_all_cities, get_all_streets, get_all_homes, get_all_sections
 
 router = Router()
 
@@ -27,6 +27,8 @@ async def cmd_start(message: types.Message):
 async def handle_city(callback: CallbackQuery):
     city_id = int(callback.data.split(":", 1)[1])  # достаём id города
     streets = await get_all_streets(city_id)
+    cities = await get_all_cities()[1]
+    city_name = cities[1][1]
 
     if not streets:
         await callback.message.answer("Улицы не найдены.")
@@ -43,8 +45,8 @@ async def handle_city(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("street:"))
 async def handle_street(callback: CallbackQuery):
-    _, city, street = callback.data.split(":", 2)
-    homes = await get_all_homes(city, street)
+    _, city_id, street_id = callback.data.split(":", 2)
+    homes = await get_all_homes(int(street_id))
 
     if not homes:
         await callback.message.answer("Дома не найдены.")
