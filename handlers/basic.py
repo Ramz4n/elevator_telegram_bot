@@ -3,7 +3,8 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types import CallbackQuery
 from aiogram import F
-from database import get_all_cities, get_all_streets, get_all_homes, get_all_sections
+from database import get_all_cities, get_all_streets, get_all_homes, get_all_sections, get_all_lifts, get_city_name, \
+    get_street_name, get_home_name, get_section_name
 
 router = Router()
 
@@ -20,19 +21,21 @@ async def cmd_start(message: types.Message):
             [InlineKeyboardButton(text=city_name, callback_data=f"city:{city_id}")]
             for city_id, city_name in cities])
 
-    await message.answer( "Привет! Выбери город из списка:", reply_markup=keyboard )
+    await message.answer( "Выбери город из списка:", reply_markup=keyboard )
 
 
 @router.callback_query(F.data.startswith("city:"))
 async def handle_city(callback: CallbackQuery):
-    city_id = int(callback.data.split(":", 1)[1])  # достаём id города
+    _, city_id_str = callback.data.split(":", 1)  # достаём id города
+    city_id = int(city_id_str)
+
     streets = await get_all_streets(city_id)
-    cities = await get_all_cities()[1]
-    city_name = cities[1][1]
 
     if not streets:
         await callback.message.answer("Улицы не найдены.")
         return
+
+    city_name = await get_city_name(city_id)
 
     # Кнопки с улицами
     keyboard = InlineKeyboardMarkup(
@@ -45,36 +48,83 @@ async def handle_city(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("street:"))
 async def handle_street(callback: CallbackQuery):
-    _, city_id, street_id = callback.data.split(":", 2)
-    homes = await get_all_homes(int(street_id))
+    _, city_id_str, street_id_str = callback.data.split(":", 2)
+    city_id = int(city_id_str)
+    street_id = int(street_id_str)
+
+    homes = await get_all_homes(street_id)
 
     if not homes:
         await callback.message.answer("Дома не найдены.")
         return
 
+    city_name = await get_city_name(city_id)
+    street_name = await get_street_name(street_id)
+
     # Кнопки с домами
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=home, callback_data=f"home:{city}:{street}:{home}")]
-            for home in homes] )
-    await callback.message.answer(f"Выбран город: {city}\nВыбрана улица: {street}\nТеперь выбери дом:", reply_markup=keyboard)
+            [InlineKeyboardButton(text=home_name, callback_data=f"home:{city_id}:{street_id}:{home_id}")]
+            for home_id, home_name in homes] )
+    await callback.message.answer(f"Выбран город: {city_name}\nВыбрана улица: {street_name}\nТеперь выбери дом:", reply_markup=keyboard)
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("home:"))
 async def handler_home(callback: CallbackQuery):
-    _, city, street, home = callback.data.split(":", 3)
-    sections = await get_all_sections(home)
+    _, city_id_str, street_id_str, home_id_str = callback.data.split(":", 3)
+    city_id = int(city_id_str)
+    street_id = int()
+    home_id = int(home_id_str)
+
+    sections = await get_all_sections(home_id)
 
     if not sections:
         await callback.message.answer("Подъезды не найдены.")
         return
 
+    city_name = await get_city_name(city_id)
+    street_name = await get_street_name(street_id)
+    home_name = await get_home_name(home_id)
+    section_name = await get_section_name(section_id)
+
     # Кнопки с падиками
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=section, callback_data=f"section:{city}:{street}:{home}:{section}")]
-            for section in sections])
-    await callback.message.answer(f"Выбран город: {city}\nВыбрана улица: {street}\nВыбран дом: {home}\nТеперь выбери подъезд:",
+            [InlineKeyboardButton(text=section_name, callback_data=f"section:{city_id}:{street_id}:{home_id}:{section_id}")]
+            for section_id in sections])
+    await callback.message.answer(f"Выбран город: {city_name}\nВыбрана улица: {street_name}\nВыбран дом: {home_name}\nТеперь выбери подъезд:",
                                   reply_markup=keyboard)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("home:"))
+async def handler_entrance(callback: CallbackQuery):
+    _, city_id_str, street_id_str, home_id_str, section_id_str = callback.data.split(":", 4)
+    city_id = int(city_id_str)
+    street_id = int()
+    home_id = int(home_id_str)
+    section_id = int(section_id_str)
+
+    lifts = await get_all_lifts(home_id, section_id)
+
+    if not lifts:
+        await callback.message.answer("Лифты не найдены.")
+        return
+
+    city_name = await get_city_name(city_id)
+    street_name = await get_street_name(street_id)
+    home_name = await get_home_name(home_id)
+    section_name = await get_section_name(section_id)
+
+    # Кнопки с падиками
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=lift_name,
+                                  callback_data=f"section:{city_id}:{street_id}:{home_id}:{section_id}")]
+            for lift_id, lift_name in lifts])
+    await callback.message.answer(
+        f"Выбран город: {city_name}\nВыбрана улица: {street_name}\n"
+        f"Выбран дом: {home_name}\nВыбран подъезд: {section_name}\nТеперь выбери лифт:",
+        reply_markup=keyboard)
     await callback.answer()
