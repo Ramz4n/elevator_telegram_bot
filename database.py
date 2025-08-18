@@ -53,8 +53,10 @@ async def get_home_name(home_id: int) -> str:
 async def get_all_sections(home_id : int) -> list[tuple[int, str]]:
     async with asyncmy.connect(**DB_CONFIG) as conn:
         async  with conn.cursor() as cursor:
-            query = '''SELECT l.id_подъезд
+            query = '''SELECT l.id_подъезд,
+                        p.Номер
                         FROM lifts l
+                        JOIN padik p ON l.id_подъезд = p.id
                         WHERE l.id_дом = %s
                         GROUP BY id_подъезд'''
             await cursor.execute(query, (home_id,))

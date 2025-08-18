@@ -74,7 +74,7 @@ async def handle_street(callback: CallbackQuery):
 async def handler_home(callback: CallbackQuery):
     _, city_id_str, street_id_str, home_id_str = callback.data.split(":", 3)
     city_id = int(city_id_str)
-    street_id = int()
+    street_id = int(street_id_str)
     home_id = int(home_id_str)
 
     sections = await get_all_sections(home_id)
@@ -86,13 +86,12 @@ async def handler_home(callback: CallbackQuery):
     city_name = await get_city_name(city_id)
     street_name = await get_street_name(street_id)
     home_name = await get_home_name(home_id)
-    section_name = await get_section_name(section_id)
 
     # Кнопки с падиками
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=section_name, callback_data=f"section:{city_id}:{street_id}:{home_id}:{section_id}")]
-            for section_id in sections])
+            for section_id, section_name in sections])
     await callback.message.answer(f"Выбран город: {city_name}\nВыбрана улица: {street_name}\nВыбран дом: {home_name}\nТеперь выбери подъезд:",
                                   reply_markup=keyboard)
     await callback.answer()
@@ -102,7 +101,7 @@ async def handler_home(callback: CallbackQuery):
 async def handler_entrance(callback: CallbackQuery):
     _, city_id_str, street_id_str, home_id_str, section_id_str = callback.data.split(":", 4)
     city_id = int(city_id_str)
-    street_id = int()
+    street_id = int(street_id_str)
     home_id = int(home_id_str)
     section_id = int(section_id_str)
 
