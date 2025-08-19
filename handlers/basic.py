@@ -97,7 +97,7 @@ async def handler_home(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("home:"))
+@router.callback_query(F.data.startswith("section:"))
 async def handler_entrance(callback: CallbackQuery):
     _, city_id_str, street_id_str, home_id_str, section_id_str = callback.data.split(":", 4)
     city_id = int(city_id_str)
@@ -120,10 +120,33 @@ async def handler_entrance(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=lift_name,
-                                  callback_data=f"section:{city_id}:{street_id}:{home_id}:{section_id}")]
+                                  callback_data=f"section:{city_id}:{street_id}:{home_id}:{section_id}:{lift_id}")]
             for lift_id, lift_name in lifts])
     await callback.message.answer(
         f"Выбран город: {city_name}\nВыбрана улица: {street_name}\n"
         f"Выбран дом: {home_name}\nВыбран подъезд: {section_name}\nТеперь выбери лифт:",
         reply_markup=keyboard)
     await callback.answer()
+
+async def show_lift_history(callback: CallbackQuery, lift_id: int, page=0, per_page=5):
+    history = await get_history(lift_id)  # список [(date, event), ...]
+
+    start = page * per_page
+    end = start + per_page
+    chunk = history[start:end]
+
+    if not chunk:
+        await callback.message.edit_text("История пуста.")
+        return
+
+    text = "📜 История лифта:\n\n" + "\n".join(
+        [f"{date}: {event}" for date, event in chunk]
+    )
+
+    keyboard = []
+    if page > 0:
+        keyboard.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"history:{lift_id}:{page-1}"))
+    if end < len(history):
+        keyboard.append(InlineKeyboardButton("Вперёд ➡️", callback_data=f"history:{lift_id}:{page+1}"))
+
+    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[keyboard]))
