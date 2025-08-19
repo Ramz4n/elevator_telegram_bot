@@ -4,7 +4,8 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types import CallbackQuery
 from aiogram import F
 from database import get_all_cities, get_all_streets, get_all_homes, get_all_sections, get_all_lifts, get_city_name, \
-    get_street_name, get_home_name, get_section_name
+    get_street_name, get_home_name, get_section_name, get_history
+from math import ceil
 
 router = Router()
 
@@ -98,7 +99,7 @@ async def handler_home(callback: CallbackQuery):
 
 
 @router.callback_query(F.data.startswith("section:"))
-async def handler_entrance(callback: CallbackQuery):
+async def handler_section(callback: CallbackQuery):
     _, city_id_str, street_id_str, home_id_str, section_id_str = callback.data.split(":", 4)
     city_id = int(city_id_str)
     street_id = int(street_id_str)
@@ -120,7 +121,7 @@ async def handler_entrance(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=lift_name,
-                                  callback_data=f"section:{city_id}:{street_id}:{home_id}:{section_id}:{lift_id}")]
+                                  callback_data=f"lift:{lift_id}")]
             for lift_id, lift_name in lifts])
     await callback.message.answer(
         f"Выбран город: {city_name}\nВыбрана улица: {street_name}\n"
@@ -128,25 +129,44 @@ async def handler_entrance(callback: CallbackQuery):
         reply_markup=keyboard)
     await callback.answer()
 
-async def show_lift_history(callback: CallbackQuery, lift_id: int, page=0, per_page=5):
-    history = await get_history(lift_id)  # список [(date, event), ...]
+@router.callback_query(F.data.startswith("lift:"))
+async def handler_lift_history(callback: CallbackQuery):
+    _, lift_id_str = callback.data.split(":")
+    lift_id = int(lift_id_str)
 
+    await show_lift_history(callback, lift_id)
+
+async def show_lift_history(callback: CallbackQuery, lift_id: int, page: int = 0, per_page: int = 5):
+    history = await get_history(lift_id)  # [(date, event), ...]
+
+    total_records = len(history)
+    total_pages = ceil(total_records / per_page)  # считаем кол-во страниц
+
+    if total_records == 0:
+        await callback.message.edit_text("История пуста.")
+        return
+
+    # диапазон записей для текущей страницы
     start = page * per_page
     end = start + per_page
     chunk = history[start:end]
 
-    if not chunk:
-        await callback.message.edit_text("История пуста.")
-        return
-
     text = "📜 История лифта:\n\n" + "\n".join(
         [f"{date}: {event}" for date, event in chunk]
     )
+    text += f"\n\nСтраница {page+1} из {total_pages}"  # ⚡ добавляем счётчик страниц
 
-    keyboard = []
+    # кнопки пагинации
+    nav_buttons = []
     if page > 0:
-        keyboard.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"history:{lift_id}:{page-1}"))
-    if end < len(history):
-        keyboard.append(InlineKeyboardButton("Вперёд ➡️", callback_data=f"history:{lift_id}:{page+1}"))
+        nav_buttons.append(InlineKeyboardButton(text="⬅️ Назад", callback_data=f"lift:{lift_id}:{page-1}"))
+    if page < total_pages - 1:
+        nav_buttons.append(InlineKeyboardButton(text="Вперёд ➡️", callback_data=f"lift:{lift_id}:{page+1}"))
 
-    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[keyboard]))
+    # собираем клавиатуру
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[nav_buttons] if nav_buttons else []
+    )
+
+    await callback.message.edit_text(text, reply_markup=keyboard)
+    cmd_start()

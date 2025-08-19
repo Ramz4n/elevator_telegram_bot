@@ -92,9 +92,9 @@ async def get_lift_name(home_id: int, section_id: int) -> str:
 async def get_history(lift_id: int) -> list[tuple[int, str]]:
     async with asyncmy.connect(**DB_CONFIG) as conn:
         async with conn.cursor() as cursor:
-            await cursor.execute('''SELECT FROM_UNIXTIME(Дата_заявки, '%d.%m.%Y, %H:%i') as Дата_заявки,
+            await cursor.execute('''SELECT FROM_UNIXTIME(Дата_заявки, '%%d.%%m.%%Y, %%H:%%i') as Дата_заявки,
              Комментарий
              FROM zayavki 
              WHERE id_лифт = %s''', (lift_id, ))
-            result = await cursor.fetchone()
+            result = await cursor.fetchall()
             return result
