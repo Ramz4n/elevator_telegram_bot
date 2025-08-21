@@ -110,6 +110,7 @@ async def handler_home(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+# --- Хендлер для подъезда ---
 @router.callback_query(F.data.startswith("section:"))
 async def handler_section(callback: CallbackQuery, state: FSMContext):
     _, city_id_str, street_id_str, home_id_str, section_id_str = callback.data.split(":", 4)
@@ -147,7 +148,7 @@ async def handler_section(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("lift:"))
 async def handler_lift_history(callback: CallbackQuery, state: FSMContext):
-    parts = callback.data.split(":")  # ["lift", "123", "1"]
+    parts = callback.data.split(":")
 
     lift_id = int(parts[1])
     page = int(parts[2]) if len(parts) > 2 else 0  # если страница не передана → 0
@@ -220,3 +221,11 @@ async def save_message(state: FSMContext, msg: types.Message):
     messages = data.get("messages", [])
     messages.append(msg.message_id)
     await state.update_data(messages=messages)
+
+def build_keyboard(buttons, n_cols=3):
+    """
+    Разбивает список кнопок на строки по n_cols
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[buttons[i:i + n_cols] for i in range(0, len(buttons), n_cols)]
+    )
