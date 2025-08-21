@@ -20,17 +20,24 @@ async def cmd_start(message: types.Message, state: FSMContext):
         await state.update_data(messages=[msg.message_id])
         return
 
-    # Формируем кнопки
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=city_name, callback_data=f"city:{city_id}")]
+    # Кнопки с подъездами
+    keyboard = build_keyboard([
+        InlineKeyboardButton(text=city_name,
+                             callback_data=f"city:{city_id}")
         for city_id, city_name in cities
-    ])
+    ], 3)
 
     msg = await message.answer("Выбери город из списка:", reply_markup=keyboard)
     await save_message(state, msg)
 
 @router.callback_query(F.data.startswith("city:"))
 async def handle_city(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    for msg_id in data.get("messages", []):
+        try:
+            await callback.bot.delete_message(callback.message.chat.id, msg_id)
+        except Exception:
+            pass
     _, city_id_str = callback.data.split(":", 1)  # достаём id города
     city_id = int(city_id_str)
 
@@ -42,11 +49,11 @@ async def handle_city(callback: CallbackQuery, state: FSMContext):
 
     city_name = await get_city_name(city_id)
 
-    # Кнопки с улицами
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=street_name, callback_data=f"street:{city_id}:{street_id}")]
-            for street_id, street_name in streets] )
+    # Кнопки с подъездами
+    keyboard = build_keyboard([
+        InlineKeyboardButton(text=street_name, callback_data=f"street:{city_id}:{street_id}")
+        for street_id, street_name in streets
+    ], 3)
     msg = await callback.message.answer(f"Выбран город: {city_name}\nТеперь выбери улицу:", reply_markup=keyboard)
     await save_message(state, msg)
     await callback.answer()
@@ -54,6 +61,12 @@ async def handle_city(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("street:"))
 async def handle_street(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    for msg_id in data.get("messages", []):
+        try:
+            await callback.bot.delete_message(callback.message.chat.id, msg_id)
+        except Exception:
+            pass
     _, city_id_str, street_id_str = callback.data.split(":", 2)
     city_id = int(city_id_str)
     street_id = int(street_id_str)
@@ -67,11 +80,11 @@ async def handle_street(callback: CallbackQuery, state: FSMContext):
     city_name = await get_city_name(city_id)
     street_name = await get_street_name(street_id)
 
-    # Кнопки с домами
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=home_name, callback_data=f"home:{city_id}:{street_id}:{home_id}")]
-            for home_id, home_name in homes] )
+    # Кнопки с подъездами
+    keyboard = build_keyboard([
+        InlineKeyboardButton(text=home_name, callback_data=f"home:{city_id}:{street_id}:{home_id}")
+        for home_id, home_name in homes
+    ], 3)
     msg = await callback.message.answer(f"Выбран город: {city_name}\n"
                                         f"Выбрана улица: {street_name}\n"
                                         f"Теперь выбери дом:", reply_markup=keyboard)
@@ -81,6 +94,12 @@ async def handle_street(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("home:"))
 async def handler_home(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    for msg_id in data.get("messages", []):
+        try:
+            await callback.bot.delete_message(callback.message.chat.id, msg_id)
+        except Exception:
+            pass
     _, city_id_str, street_id_str, home_id_str = callback.data.split(":", 3)
     city_id = int(city_id_str)
     street_id = int(street_id_str)
@@ -96,11 +115,12 @@ async def handler_home(callback: CallbackQuery, state: FSMContext):
     street_name = await get_street_name(street_id)
     home_name = await get_home_name(home_id)
 
-    # Кнопки с падиками
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=section_name, callback_data=f"section:{city_id}:{street_id}:{home_id}:{section_id}")]
-            for section_id, section_name in sections])
+    # Кнопки с подъездами
+    keyboard = build_keyboard([
+        InlineKeyboardButton(text=section_name, callback_data=f"section:{city_id}:{street_id}:{home_id}:{section_id}")
+        for section_id, section_name in sections
+    ], 3)
+
     msg = await callback.message.answer(f"Выбран город: {city_name}\n"
                                   f"Выбрана улица: {street_name}\n"
                                   f"Выбран дом: {home_name}\n"
@@ -113,6 +133,12 @@ async def handler_home(callback: CallbackQuery, state: FSMContext):
 # --- Хендлер для подъезда ---
 @router.callback_query(F.data.startswith("section:"))
 async def handler_section(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    for msg_id in data.get("messages", []):
+        try:
+            await callback.bot.delete_message(callback.message.chat.id, msg_id)
+        except Exception:
+            pass
     _, city_id_str, street_id_str, home_id_str, section_id_str = callback.data.split(":", 4)
     city_id = int(city_id_str)
     street_id = int(street_id_str)
@@ -130,12 +156,12 @@ async def handler_section(callback: CallbackQuery, state: FSMContext):
     home_name = await get_home_name(home_id)
     section_name = await get_section_name(section_id)
 
-    # Кнопки с падиками
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=lift_name,
-                                  callback_data=f"lift:{lift_id}")]
-            for lift_id, lift_name in lifts])
+    # Кнопки с подъездами
+    keyboard = build_keyboard([
+        InlineKeyboardButton(text=lift_name, callback_data=f"lift:{lift_id}")
+        for lift_id, lift_name in lifts
+    ], 3)
+
     msg = await callback.message.answer(
         f"Выбран город: {city_name}\n"
         f"Выбрана улица: {street_name}\n"
