@@ -100,3 +100,21 @@ async def get_history(lift_id: int) -> list[tuple[int, str]]:
                         ''', (lift_id, ))
             result = await cursor.fetchall()
             return result
+
+async def get_full_address_lift(lift_id: int) -> list[tuple[str, str, str, str, str]]:
+    async with asyncmy.connect(**DB_CONFIG) as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute('''SELECT 
+                                    g.Город AS Город,
+                                    s.Улица AS Улица,
+                                    d.Номер AS Дом,
+                                    p.Номер AS Падик,
+                                    l.Тип_лифта AS Лифт
+                                    FROM lifts l
+                                    JOIN padik p ON l.`id_подъезд` = p.id
+                                    JOIN doma d ON l.`id_дом` = d.id
+                                    JOIN street s ON d.`id_улица` = s.id
+                                    JOIN goroda g ON s.`id_город` = g.id
+                                    WHERE l.id = %s''', (lift_id, ))
+            result = await cursor.fetchall()
+            return result

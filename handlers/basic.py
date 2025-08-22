@@ -4,7 +4,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types import CallbackQuery
 from aiogram import F
 from database import get_all_cities, get_all_streets, get_all_homes, get_all_sections, get_all_lifts, get_city_name, \
-    get_street_name, get_home_name, get_section_name, get_history
+    get_street_name, get_home_name, get_section_name, get_history, get_full_address_lift
 from math import ceil
 from aiogram.fsm.context import FSMContext
 
@@ -24,8 +24,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     keyboard = build_keyboard([
         InlineKeyboardButton(text=city_name,
                              callback_data=f"city:{city_id}")
-        for city_id, city_name in cities
-    ], 3)
+        for city_id, city_name in cities], 3)
 
     msg = await message.answer("Выбери город из списка:", reply_markup=keyboard)
     await save_message(state, msg)
@@ -52,8 +51,7 @@ async def handle_city(callback: CallbackQuery, state: FSMContext):
     # Кнопки с подъездами
     keyboard = build_keyboard([
         InlineKeyboardButton(text=street_name, callback_data=f"street:{city_id}:{street_id}")
-        for street_id, street_name in streets
-    ], 3)
+        for street_id, street_name in streets], 3)
     msg = await callback.message.answer(f"Выбран город: {city_name}\nТеперь выбери улицу:", reply_markup=keyboard)
     await save_message(state, msg)
     await callback.answer()
@@ -128,18 +126,15 @@ async def show_home(callback: CallbackQuery, state: FSMContext, city_id: int, st
     keyboard = build_keyboard([
         InlineKeyboardButton(
             text=section_name,
-            callback_data=f"section:{city_id}:{street_id}:{home_id}:{section_id}"
-        )
-        for section_id, section_name in sections
-    ], 3)
+            callback_data=f"section:{city_id}:{street_id}:{home_id}:{section_id}")
+        for section_id, section_name in sections], 3)
 
     msg = await callback.message.answer(
         f"Выбран город: {city_name}\n"
         f"Выбрана улица: {street_name}\n"
         f"Выбран дом: {home_name}\n"
         f"Теперь выбери подъезд:",
-        reply_markup=keyboard
-    )
+        reply_markup=keyboard)
     await save_message(state, msg)
     await callback.answer()
 
@@ -176,10 +171,8 @@ async def show_section(callback: CallbackQuery, state: FSMContext, city_id: int,
     section_name = await get_section_name(section_id)
 
     # Кнопки с подъездами
-    keyboard = build_keyboard([
-        InlineKeyboardButton(text=lift_name, callback_data=f"lift:{lift_id}")
-        for lift_id, lift_name in lifts
-    ], 3)
+    keyboard = build_keyboard([InlineKeyboardButton(text=lift_name, callback_data=f"lift:{lift_id}")
+        for lift_id, lift_name in lifts], 3)
 
     msg = await callback.message.answer(
         f"Выбран город: {city_name}\n"
@@ -200,55 +193,51 @@ async def handler_lift(callback: CallbackQuery, state: FSMContext):
 
 
 async def show_lift(callback: CallbackQuery, state: FSMContext, lift_id: int, page: int = 0, per_page: int = 5, new_message: bool = False):
-    history = await get_history(lift_id)
 
+    history = await get_history(lift_id)
     total_records = len(history)
     total_pages = ceil(total_records / per_page)
 
     if total_records == 0:
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="🏠 Выбрать другой адрес", callback_data="restart")]
-            ]
-        )
+                [InlineKeyboardButton(text="🏠 Выбрать другой адрес", callback_data="restart")]])
         if new_message:
-            msg = await callback.message.answer("История пуста.", reply_markup=keyboard)
+            msg = await callback.message.answer("История пуста.", reply_markup=keyboard, parse_mode="HTML")
             await save_message(state, msg)  # ✅
         else:
-            await callback.message.edit_text("История пуста.", reply_markup=keyboard)
+            await callback.message.edit_text("История пуста.", reply_markup=keyboard, parse_mode="HTML")
+        return
 
     start = page * per_page
     end = start + per_page
     chunk = history[start:end]
 
-    text = "📜 История лифта:\n\n" + "\n".join(
-        [f"{date:<20} | {event}" for date, event in chunk]
-    )
+    full_address = await get_full_address_lift(lift_id)
+    row = full_address[0]
+    lift_str = f"{row[0]}, {row[1]} {row[2]}, {row[3]}, {row[4]}"
+
+    text = f"📜 История лифта: {lift_str}\n\n" + "\n".join(
+        [f"🔴<b>{date}</b> | {event}" for date, event in chunk])
     text += f"\n\nСтраница {page+1} из {total_pages}"
 
     nav_buttons = []
     if page > 0:
         nav_buttons.append(InlineKeyboardButton(
-            text="⬅️ Назад", callback_data=f"lift:{lift_id}:{page - 1}"
-        ))
+            text="⬅️ Назад", callback_data=f"lift:{lift_id}:{page - 1}"))
     if page < total_pages - 1:
         nav_buttons.append(InlineKeyboardButton(
-            text="Вперёд ➡️", callback_data=f"lift:{lift_id}:{page + 1}"
-        ))
+            text="Вперёд ➡️", callback_data=f"lift:{lift_id}:{page + 1}"))
 
-    extra_buttons = [
-        InlineKeyboardButton(text="🏠 Выбрать новый адрес", callback_data="restart")
-    ]
+    extra_buttons = [InlineKeyboardButton(text="🏠 Выбрать новый адрес", callback_data="restart")]
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[nav_buttons] + [extra_buttons] if nav_buttons else [extra_buttons]
-    )
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[nav_buttons] + [extra_buttons] if nav_buttons else [extra_buttons])
 
     if new_message:
-        msg = await callback.message.answer(text, reply_markup=keyboard)
+        msg = await callback.message.answer(text, reply_markup=keyboard, parse_mode="HTML")
         await save_message(state, msg)  # ✅ вместо callback.state
     else:
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.callback_query(F.data == "restart")
@@ -275,5 +264,4 @@ def build_keyboard(buttons, n_cols=3):
     Разбивает список кнопок на строки по n_cols
     """
     return InlineKeyboardMarkup(
-        inline_keyboard=[buttons[i:i + n_cols] for i in range(0, len(buttons), n_cols)]
-    )
+        inline_keyboard=[buttons[i:i + n_cols] for i in range(0, len(buttons), n_cols)])
