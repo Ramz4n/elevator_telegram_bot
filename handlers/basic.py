@@ -12,6 +12,12 @@ router = Router()
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    for msg_id in data.get("messages", []):
+        try:
+            await message.bot.delete_message(message.chat.id, msg_id)
+        except Exception:
+            pass
     await state.clear()  # очищаем старое состояние
 
     cities = await get_all_cities()
