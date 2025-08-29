@@ -7,6 +7,7 @@ from database import get_all_cities, get_all_streets, get_all_homes, get_all_sec
     get_street_name, get_home_name, get_section_name, get_history, get_full_address_lift
 from math import ceil
 from aiogram.fsm.context import FSMContext
+import logging
 
 router = Router()
 
@@ -16,8 +17,8 @@ async def cmd_start(message: types.Message, state: FSMContext):
     for msg_id in data.get("messages", []):
         try:
             await message.bot.delete_message(message.chat.id, msg_id)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(f"Failed to delete message {msg_id}: {e}")
     await state.clear()  # очищаем старое состояние
 
     cities = await get_all_cities()
@@ -41,8 +42,8 @@ async def handle_city(callback: CallbackQuery, state: FSMContext):
     for msg_id in data.get("messages", []):
         try:
             await callback.bot.delete_message(callback.message.chat.id, msg_id)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(f"Failed to delete message {msg_id}: {e}")
     _, city_id_str = callback.data.split(":", 1)  # достаём id города
     city_id = int(city_id_str)
 
@@ -69,8 +70,8 @@ async def handle_street(callback: CallbackQuery, state: FSMContext):
     for msg_id in data.get("messages", []):
         try:
             await callback.bot.delete_message(callback.message.chat.id, msg_id)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(f"Failed to delete message {msg_id}: {e}")
     _, city_id_str, street_id_str = callback.data.split(":", 2)
     city_id = int(city_id_str)
     street_id = int(street_id_str)
@@ -111,8 +112,8 @@ async def show_home(callback: CallbackQuery, state: FSMContext, city_id: int, st
     for msg_id in data.get("messages", []):
         try:
             await callback.bot.delete_message(callback.message.chat.id, msg_id)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(f"Failed to delete message {msg_id}: {e}")
 
     sections = await get_all_sections(home_id)
 
@@ -157,8 +158,8 @@ async def show_section(callback: CallbackQuery, state: FSMContext, city_id: int,
     for msg_id in data.get("messages", []):
         try:
             await callback.bot.delete_message(callback.message.chat.id, msg_id)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(f"Failed to delete message {msg_id}: {e}")
 
     lifts = await get_all_lifts(home_id, section_id)
 
@@ -252,8 +253,8 @@ async def restart(callback: CallbackQuery, state: FSMContext):
     for msg_id in data.get("messages", []):
         try:
             await callback.bot.delete_message(callback.message.chat.id, msg_id)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(f"Failed to delete message {msg_id}: {e}")
 
     await state.clear()  # очищаем всё
     await cmd_start(callback.message, state)  # запускаем заново
